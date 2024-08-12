@@ -10,6 +10,7 @@ import os
 from werkzeug.utils import secure_filename
 from PIL import Image
 import time
+import requests  # For making HTTP requests to the external API
 
 app = Flask(__name__)
 CORS(app)
@@ -169,6 +170,29 @@ def upload_image():
         return jsonify({'url': file_path})
 
     return jsonify({'error': 'An unknown error occurred'}), 500
+
+@app.route('/fetch_products', methods=['POST'])
+def fetch_products():
+    data = request.get_json()
+    skin_tone = data.get('skin_tone')
+    colors = data.get('color')
+    gender = data.get('gender')
+
+    if not skin_tone:
+        return jsonify({'error': 'Skin tone not provided'}), 400
+
+    api_key = 'be8c5fbaed043f1406288f002f5fff6d0c5eabd72cb9bf0b66be2d1ec004a3e5'
+    
+    formatted_color = colors
+    color_query = f'{formatted_color}+shirt+{gender}'
+    
+    try:
+        response = requests.get(f'https://serpapi.com/search.json?engine=walmart&query={color_query}&api_key={api_key}')
+        response.raise_for_status()
+        products = response.json()
+        return jsonify({'products': products})
+    except requests.RequestException as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
